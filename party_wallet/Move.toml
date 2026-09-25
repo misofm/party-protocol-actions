@@ -2,7 +2,7 @@
 name = "party_wallet"
 edition = "2024"
 license = "Apache 2.0"
-authors = ["Miso Labs, Inc. (build@miso.network)"]
+authors = ["Miso Labs, Inc. (build@miso.fm)"]
 
 [dependencies]
 partyos = { git = "https://github.com/misofm/partyos.git", rev = "b1fe2351e854630910a81f214d5ab0a45e0c6fab" }
