@@ -5,6 +5,6 @@ license = "Apache 2.0"
 authors = ["Miso Labs, Inc. (build@miso.fm)"]
 
 [dependencies]
-miso_party = { git = "https://github.com/misofm/party-protocol.git", rev = "7b25b1aa4f41ff16e82315b321736042d0debf57" }
+miso_party = { git = "https://github.com/misofm/party-protocol.git", rev = "9374c6eed64c907722ac1c93813c76dc7912b357" }
 hikida = { git = "https://github.com/unconfirmedlabs/hikida.git", rev = "c91d6a0f536a5f1457b342a8838fc1d7ba09212e" }
 vault = { git = "https://github.com/misofm/vault.git", rev = "b39cbba9688d19aa651032f25ca27951746d13f6", modes = ["test"] }
