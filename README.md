@@ -44,3 +44,9 @@ Git dependencies are pinned to full commit SHAs.
 
 Coin-receipt events retain the consumed coin count, amounts and business identities.
 They do not duplicate a variable-length list of input coin IDs; transaction inputs/effects provide that provenance when needed.
+
+## License
+
+[Functional Source License 1.1, ALv2 Future License](./LICENSE.md)
+(FSL-1.1-ALv2). Any use except a Competing Use is permitted, and each version
+becomes Apache-2.0 two years after its release.

@@ -1,5 +1,5 @@
 // Copyright (c) Miso Labs, Inc.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: FSL-1.1-ALv2
 // Real validator regression: the Move unit-test VM does not enforce accumulator solvency.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
