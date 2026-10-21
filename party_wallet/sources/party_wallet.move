@@ -3,13 +3,11 @@
 
 /// Custody-agnostic wallet actions for a Party.
 ///
-/// A Party ID is both an object ID and an address. Anyone may send transferable
-/// objects or accumulator funds to that stable address, while only the matching
-/// `PartyAdminCap` can expose the Party UID needed to withdraw them. These raw-cap
-/// actions return every withdrawn asset to the caller so direct owners, Vault
-/// administrators, and other custody systems can compose the same immutable API.
-///
-/// This package stores no Party data and defines no plugin or transfer policy.
+/// A Party ID is also an address: anyone may send objects or accumulator funds to it, while
+/// only the matching `PartyAdminCap` exposes the UID needed to withdraw them. Every
+/// withdrawn asset is returned to the caller so owners, Vault admins and other custody
+/// systems compose the same API. Stores no Party data and defines no plugin or transfer
+/// policy.
 module party_wallet::party_wallet;
 
 // === Imports ===
@@ -23,27 +21,23 @@ use miso_party::party::{Party, PartyAdminCap};
 
 // === Errors ===
 
-/// No coin tickets were supplied to `receive_balance`.
 const ENothingToReceive: u64 = 0;
-/// Zero-value redemption is rejected by the Party wallet Action.
 const ENoValueToRedeem: u64 = 1;
 
 // === Events ===
 
-/// Emitted when one object is received from a Party's object inbox.
 public struct ObjectReceivedEvent<phantom Item> has copy, drop {
     party_id: ID,
     object_id: ID,
 }
 
-/// Emitted when coin objects are received and merged into one balance.
+/// `coins` is the number of coin objects merged into `amount`.
 public struct CoinsReceivedEvent<phantom Currency> has copy, drop {
     party_id: ID,
     amount: u64,
     coins: u64,
 }
 
-/// Emitted when funds are redeemed from a Party's accumulator.
 public struct FundsRedeemedEvent<phantom Currency> has copy, drop {
     party_id: ID,
     amount: u64,
@@ -51,10 +45,7 @@ public struct FundsRedeemedEvent<phantom Currency> has copy, drop {
 
 // === Public Functions ===
 
-/// Receive and return one `key + store` object addressed to `party`.
-///
-/// Aborts if `admin_cap` belongs to another Party or the receiving ticket does
-/// not identify an object addressed to this Party.
+/// Aborts if the ticket does not identify an object addressed to this Party.
 public fun receive<Item: key + store>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
@@ -66,11 +57,7 @@ public fun receive<Item: key + store>(
     received
 }
 
-/// Receive a non-empty set of coin objects addressed to `party`, merge them,
-/// and return their combined `Balance`.
-///
-/// Aborts with `ENothingToReceive` when `coins` is empty, if `admin_cap`
-/// belongs to another Party, or if any ticket is invalid for this Party.
+/// Aborts if any ticket is invalid for this Party.
 public fun receive_balance<Currency>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
@@ -84,11 +71,7 @@ public fun receive_balance<Currency>(
     balance
 }
 
-/// Redeem `value` from `party`'s accumulator and return the resulting balance.
-///
-/// Aborts if `admin_cap` belongs to another Party. Accumulator semantics remain
-/// in `hikida`: this Action rejects zero with `ENoValueToRedeem`, and unavailable funds abort in
-/// the Sui accumulator implementation.
+/// Unavailable funds abort in the Sui accumulator implementation.
 public fun redeem_balance<Currency>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
@@ -104,20 +87,17 @@ public fun redeem_balance<Currency>(
 
 // === View Functions ===
 
-/// Return the Party ID as the address to which objects and funds may be sent.
 public fun inbox_address(party: &Party): address {
     object::id(party).to_address()
 }
 
 // === Test Functions ===
 
-/// The fields of an `ObjectReceivedEvent`, for test assertions.
 #[test_only]
 public fun object_received_event_fields<Item>(event: &ObjectReceivedEvent<Item>): (ID, ID) {
     (event.party_id, event.object_id)
 }
 
-/// The fields of a `CoinsReceivedEvent`, for test assertions.
 #[test_only]
 public fun coins_received_event_fields<Currency>(
     event: &CoinsReceivedEvent<Currency>,
@@ -125,7 +105,6 @@ public fun coins_received_event_fields<Currency>(
     (event.party_id, event.amount, event.coins)
 }
 
-/// The fields of a `FundsRedeemedEvent`, for test assertions.
 #[test_only]
 public fun funds_redeemed_event_fields<Currency>(
     event: &FundsRedeemedEvent<Currency>,

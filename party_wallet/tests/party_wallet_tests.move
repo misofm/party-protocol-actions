@@ -21,7 +21,6 @@ const RECIPIENT: address = @0xB;
 /// `accumulator::create_for_testing` is system-only.
 const SYSTEM: address = @0x0;
 
-/// A non-coin `key + store` object, shaped like an asset or capability.
 public struct StakeLike has key, store {
     id: UID,
     amount: u64,
