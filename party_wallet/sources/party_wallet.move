@@ -12,12 +12,14 @@
 /// This package stores no Party data and defines no plugin or transfer policy.
 module party_wallet::party_wallet;
 
-use hikida::hikida;
-use miso_party::party::{Party, PartyAdminCap};
+// === Imports ===
+
 use sui::balance::Balance;
 use sui::coin::Coin;
 use sui::event::emit;
 use sui::transfer::Receiving;
+use hikida::hikida;
+use miso_party::party::{Party, PartyAdminCap};
 
 // === Errors ===
 
@@ -29,7 +31,7 @@ const ENoValueToRedeem: u64 = 1;
 // === Events ===
 
 /// Emitted when one object is received from a Party's object inbox.
-public struct ObjectReceivedEvent<phantom T> has copy, drop {
+public struct ObjectReceivedEvent<phantom Item> has copy, drop {
     party_id: ID,
     object_id: ID,
 }
@@ -47,20 +49,20 @@ public struct FundsRedeemedEvent<phantom Currency> has copy, drop {
     amount: u64,
 }
 
-// === Actions ===
+// === Public Functions ===
 
 /// Receive and return one `key + store` object addressed to `party`.
 ///
 /// Aborts if `admin_cap` belongs to another Party or the receiving ticket does
 /// not identify an object addressed to this Party.
-public fun receive<T: key + store>(
+public fun receive<Item: key + store>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
-    object_to_receive: Receiving<T>,
-): T {
+    object_to_receive: Receiving<Item>,
+): Item {
     let party_id = object::id(party);
     let received = transfer::public_receive(party.uid_mut(admin_cap), object_to_receive);
-    emit(ObjectReceivedEvent<T> { party_id, object_id: object::id(&received) });
+    emit(ObjectReceivedEvent<Item> { party_id, object_id: object::id(&received) });
     received
 }
 
@@ -100,18 +102,22 @@ public fun redeem_balance<Currency>(
     balance
 }
 
+// === View Functions ===
+
 /// Return the Party ID as the address to which objects and funds may be sent.
 public fun inbox_address(party: &Party): address {
     object::id(party).to_address()
 }
 
-// === Test helpers ===
+// === Test Functions ===
 
+/// The fields of an `ObjectReceivedEvent`, for test assertions.
 #[test_only]
-public fun object_received_event_fields<T>(event: &ObjectReceivedEvent<T>): (ID, ID) {
+public fun object_received_event_fields<Item>(event: &ObjectReceivedEvent<Item>): (ID, ID) {
     (event.party_id, event.object_id)
 }
 
+/// The fields of a `CoinsReceivedEvent`, for test assertions.
 #[test_only]
 public fun coins_received_event_fields<Currency>(
     event: &CoinsReceivedEvent<Currency>,
@@ -119,6 +125,7 @@ public fun coins_received_event_fields<Currency>(
     (event.party_id, event.amount, event.coins)
 }
 
+/// The fields of a `FundsRedeemedEvent`, for test assertions.
 #[test_only]
 public fun funds_redeemed_event_fields<Currency>(
     event: &FundsRedeemedEvent<Currency>,

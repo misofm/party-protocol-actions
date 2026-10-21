@@ -4,28 +4,22 @@
 #[test_only]
 module party_wallet::party_wallet_tests;
 
-use miso_party::party::{Self, Party, PartyAdminCap};
-use party_wallet::party_wallet as action;
 use std::unit_test::{assert_eq, destroy};
-use sui::accumulator::AccumulatorRoot;
+use sui::accumulator::{Self, AccumulatorRoot};
 use sui::balance;
 use sui::coin::{Self, Coin};
 use sui::event;
 use sui::sui::SUI;
 use sui::test_scenario as ts;
+use sui::transfer::Receiving;
+use miso_party::party::{Self, Party, PartyAdminCap};
 use vault::vault::{Self, Vault, VaultAdminCap};
+use party_wallet::party_wallet as action;
 
 const ADMIN: address = @0xA;
 const RECIPIENT: address = @0xB;
 /// `accumulator::create_for_testing` is system-only.
 const SYSTEM: address = @0x0;
-
-/// Mirrors `miso_party::party::EUnauthorized`.
-const EUnauthorized: u64 = 0;
-/// Mirrors `party_wallet::party_wallet::ENoValueToRedeem`.
-const ENoValueToRedeem: u64 = 1;
-/// Mirrors `vault::vault::ENotVaultAdmin`.
-const ENotVaultAdmin: u64 = 0;
 
 /// A non-coin `key + store` object, shaped like an asset or capability.
 public struct StakeLike has key, store {
@@ -68,15 +62,15 @@ fun new_vaulted_party(scenario: &mut ts::Scenario): ID {
     party_id
 }
 
-fun send_coin<T>(scenario: &mut ts::Scenario, recipient: address, amount: u64): ID {
-    let coin = coin::mint_for_testing<T>(amount, scenario.ctx());
+fun send_coin<Currency>(scenario: &mut ts::Scenario, recipient: address, amount: u64): ID {
+    let coin = coin::mint_for_testing<Currency>(amount, scenario.ctx());
     let coin_id = object::id(&coin);
     transfer::public_transfer(coin, recipient);
     coin_id
 }
 
-fun ticket<T: key + store>(id: ID): sui::transfer::Receiving<T> {
-    ts::receiving_ticket_by_id<T>(id)
+fun ticket<Item: key + store>(id: ID): Receiving<Item> {
+    ts::receiving_ticket_by_id<Item>(id)
 }
 
 fun destroy_stake(stake: StakeLike) {
@@ -213,7 +207,7 @@ fun receives_zero_valued_coins_and_emits_count() {
     scenario.end();
 }
 
-#[test, expected_failure(abort_code = EUnauthorized, location = miso_party::party)]
+#[test, expected_failure(abort_code = miso_party::party::EUnauthorized)]
 fun receive_rejects_a_cap_for_another_party() {
     let mut scenario = ts::begin(ADMIN);
     let party_id = new_shared_party(&mut scenario, false);
@@ -318,7 +312,7 @@ fun partial_redemptions_cover_every_locally_reachable_funded_path() {
     scenario.end();
 }
 
-#[test, expected_failure(abort_code = ENoValueToRedeem, location = action)]
+#[test, expected_failure(abort_code = action::ENoValueToRedeem)]
 fun zero_redemption_aborts() {
     let ctx = &mut tx_context::dummy();
     let (mut party, admin_cap) = new_party(false, ctx);
@@ -336,7 +330,7 @@ fun zero_redemption_aborts() {
 #[test]
 fun funded_accumulator_snapshot_documents_zero_vm_result() {
     let mut scenario = ts::begin(SYSTEM);
-    sui::accumulator::create_for_testing(scenario.ctx());
+    accumulator::create_for_testing(scenario.ctx());
     let party_id = new_shared_party(&mut scenario, false);
 
     scenario.next_tx(ADMIN);
@@ -401,7 +395,7 @@ fun vault_admin_borrows_calls_action_puts_back_and_borrows_again() {
     scenario.end();
 }
 
-#[test, expected_failure(abort_code = ENotVaultAdmin, location = vault)]
+#[test, expected_failure(abort_code = vault::ENotVaultAdmin)]
 fun vault_borrow_rejects_a_foreign_vault_admin_cap() {
     let ctx = &mut tx_context::dummy();
     let (_party_a, cap_a) = new_party(false, ctx);
@@ -412,7 +406,7 @@ fun vault_borrow_rejects_a_foreign_vault_admin_cap() {
     abort
 }
 
-#[test, expected_failure(abort_code = EUnauthorized, location = miso_party::party)]
+#[test, expected_failure(abort_code = miso_party::party::EUnauthorized)]
 fun action_rejects_a_vault_containing_another_partys_cap() {
     let ctx = &mut tx_context::dummy();
     let (mut target_party, _target_cap) = new_party(false, ctx);
