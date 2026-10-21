@@ -90,7 +90,7 @@ try {
   // Populate the exact manifest-pinned dependency cache, then copy production sources unchanged.
   build(root);
   const manifest = readFileSync(join(root, "Move.toml"), "utf8");
-  for (const name of ["partyos", "hikida", "party_wallet"]) {
+  for (const name of ["miso_party", "hikida", "party_wallet"]) {
     let source = root;
     if (name !== "party_wallet") {
       const match = manifest.match(new RegExp(`${name} = \\{ git = "([^"]+)", rev = "([^"]+)"`));
@@ -101,21 +101,21 @@ try {
     mkdirSync(path);
     cpSync(join(source, "sources"), join(path, "sources"), { recursive: true });
     writeFileSync(join(path, "Move.toml"), `[package]\nname = "${name}"\nedition = "2024"\n` +
-      (name === "party_wallet" ? '\n[dependencies]\npartyos = { local = "../partyos" }\nhikida = { local = "../hikida" }\n' : ""));
+      (name === "party_wallet" ? '\n[dependencies]\nmiso_party = { local = "../miso_party" }\nhikida = { local = "../hikida" }\n' : ""));
   }
-  const partyos = await publish("partyos");
+  const partyPackage = await publish("miso_party");
   await publish("hikida");
   const wallet = await publish("party_wallet");
   const create = new Transaction();
-  const kind = create.moveCall({ target: `${partyos}::party::new_individual_kind` });
-  const [party, admin] = create.moveCall({ target: `${partyos}::party::new`,
-    arguments: [kind, create.pure.string("Wallet regression"), create.object("0x6")] });
-  create.moveCall({ target: `${partyos}::party::share`, arguments: [party!, admin!] });
+  const kind = create.moveCall({ target: `${partyPackage}::party::new_individual_kind` });
+  const [party, admin] = create.moveCall({ target: `${partyPackage}::party::new`,
+    arguments: [kind, create.pure.string("Wallet regression")] });
+  create.moveCall({ target: `${partyPackage}::party::share`, arguments: [party!, admin!] });
   create.transferObjects([admin!], sender);
   const created = success(await execute(create));
   const objects = created.objectChanges?.filter((c) => c.type === "created") ?? [];
-  const partyId = objects.find((c) => c.type === "created" && c.objectType === `${partyos}::party::Party`);
-  const adminId = objects.find((c) => c.type === "created" && c.objectType === `${partyos}::party::PartyAdminCap`);
+  const partyId = objects.find((c) => c.type === "created" && c.objectType === `${partyPackage}::party::Party`);
+  const adminId = objects.find((c) => c.type === "created" && c.objectType === `${partyPackage}::party::PartyAdminCap`);
   assert(partyId?.type === "created" && adminId?.type === "created");
   const fund = new Transaction();
   const [coin] = fund.splitCoins(fund.gas, [500]);

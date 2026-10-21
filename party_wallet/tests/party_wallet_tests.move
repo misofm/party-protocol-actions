@@ -4,7 +4,7 @@
 #[test_only]
 module party_wallet::party_wallet_tests;
 
-use partyos::party::{Self, Party, PartyAdminCap};
+use miso_party::party::{Self, Party, PartyAdminCap};
 use party_wallet::party_wallet as action;
 use std::unit_test::{assert_eq, destroy};
 use sui::accumulator::AccumulatorRoot;
@@ -20,7 +20,7 @@ const RECIPIENT: address = @0xB;
 /// `accumulator::create_for_testing` is system-only.
 const SYSTEM: address = @0x0;
 
-/// Mirrors `partyos::party::EUnauthorized`.
+/// Mirrors `miso_party::party::EUnauthorized`.
 const EUnauthorized: u64 = 0;
 /// Mirrors `party_wallet::party_wallet::ENoValueToRedeem`.
 const ENoValueToRedeem: u64 = 1;
@@ -36,17 +36,14 @@ public struct StakeLike has key, store {
 // === Fixtures ===
 
 fun new_party(group: bool, ctx: &mut TxContext): (Party, PartyAdminCap) {
-    let clock = sui::clock::create_for_testing(ctx);
     let kind = if (group) party::new_group_kind() else party::new_individual_kind();
-    let (party, admin_cap) = party::new(kind, "Test Artist", &clock, ctx);
-    clock.destroy_for_testing();
-    (party, admin_cap)
+    party::new(kind, "Test Artist", ctx)
 }
 
 fun new_shared_party(scenario: &mut ts::Scenario, group: bool): ID {
     let (party, admin_cap) = new_party(group, scenario.ctx());
     let party_id = object::id(&party);
-    party.share(&admin_cap, scenario.ctx());
+    party.share(&admin_cap);
     transfer::public_transfer(admin_cap, ADMIN);
     party_id
 }
@@ -64,7 +61,7 @@ fun new_vault<Cap: key + store>(
 fun new_vaulted_party(scenario: &mut ts::Scenario): ID {
     let (party, party_admin_cap) = new_party(false, scenario.ctx());
     let party_id = object::id(&party);
-    party.share(&party_admin_cap, scenario.ctx());
+    party.share(&party_admin_cap);
     let (vault, vault_admin_cap) = new_vault(party_admin_cap, scenario.ctx());
     vault.share();
     transfer::public_transfer(vault_admin_cap, ADMIN);
@@ -216,7 +213,7 @@ fun receives_zero_valued_coins_and_emits_count() {
     scenario.end();
 }
 
-#[test, expected_failure(abort_code = EUnauthorized, location = partyos::party)]
+#[test, expected_failure(abort_code = EUnauthorized, location = miso_party::party)]
 fun receive_rejects_a_cap_for_another_party() {
     let mut scenario = ts::begin(ADMIN);
     let party_id = new_shared_party(&mut scenario, false);
@@ -394,7 +391,7 @@ fun vault_admin_borrows_calls_action_puts_back_and_borrows_again() {
 
         let (party_admin_cap_again, receipt_again) = vault.borrow_as_admin(&vault_admin_cap);
         assert_eq!(object::id(&party_admin_cap_again), cap_id);
-        assert_eq!(party::party_admin_cap_party_id(&party_admin_cap_again), party_id);
+        assert_eq!(party.uid_mut(&party_admin_cap_again).to_inner(), party_id);
         vault.put_back(party_admin_cap_again, receipt_again);
 
         scenario.return_to_sender(vault_admin_cap);
@@ -415,7 +412,7 @@ fun vault_borrow_rejects_a_foreign_vault_admin_cap() {
     abort
 }
 
-#[test, expected_failure(abort_code = EUnauthorized, location = partyos::party)]
+#[test, expected_failure(abort_code = EUnauthorized, location = miso_party::party)]
 fun action_rejects_a_vault_containing_another_partys_cap() {
     let ctx = &mut tx_context::dummy();
     let (mut target_party, _target_cap) = new_party(false, ctx);

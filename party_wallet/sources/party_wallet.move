@@ -13,7 +13,7 @@
 module party_wallet::party_wallet;
 
 use hikida::hikida;
-use partyos::party::{Party, PartyAdminCap};
+use miso_party::party::{Party, PartyAdminCap};
 use sui::balance::Balance;
 use sui::coin::Coin;
 use sui::event::emit;
