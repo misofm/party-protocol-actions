@@ -24,6 +24,8 @@ changing this API.
 | `redeem_balance<Currency>(party, admin_cap, value)` | Redeemed `Balance<Currency>` | Wrong Party cap; zero value (`party_wallet` code `1`); accumulator failure |
 | `inbox_address(party)` | Party object ID as an address | Never |
 
+An invalid receiving ticket is a native execution failure, not a package abort code; unavailable accumulator funds abort in the Sui implementation.
+
 There are deliberately no coin-return wrappers, batch object helpers, recipient
 parameters, internal transfers, `entry` wrappers, settled-funds view, Vault
 types, witnesses, or install functions.

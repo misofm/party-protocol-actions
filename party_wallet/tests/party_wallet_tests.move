@@ -18,7 +18,6 @@ use party_wallet::party_wallet as action;
 
 const ADMIN: address = @0xA;
 const RECIPIENT: address = @0xB;
-/// `accumulator::create_for_testing` is system-only.
 const SYSTEM: address = @0x0;
 
 public struct StakeLike has key, store {
@@ -222,8 +221,6 @@ fun receive_rejects_a_cap_for_another_party() {
     abort
 }
 
-/// The framework reports an invalid receiving ticket as a native execution
-/// failure, not a stable package abort code.
 #[test, expected_failure]
 fun receive_rejects_a_ticket_for_another_address() {
     let mut scenario = ts::begin(ADMIN);
@@ -320,12 +317,6 @@ fun zero_redemption_aborts() {
     abort
 }
 
-// Accumulator solvency is enforced outside the Move test VM. The actual
-// overdraw/rollback and exactly-funded success regression lives in
-// e2e/wallet.localnet.ts; expected_failure here would not test that boundary.
-
-/// The test VM's `AccumulatorRoot` view is commit-settled and remains zero even
-/// after a test credit. This exercises the only honest local snapshot path.
 #[test]
 fun funded_accumulator_snapshot_documents_zero_vm_result() {
     let mut scenario = ts::begin(SYSTEM);

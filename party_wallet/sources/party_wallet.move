@@ -1,13 +1,6 @@
 // Copyright (c) Miso Labs, Inc.
 // SPDX-License-Identifier: FSL-1.1-ALv2
 
-/// Custody-agnostic wallet actions for a Party.
-///
-/// A Party ID is also an address: anyone may send objects or accumulator funds to it, while
-/// only the matching `PartyAdminCap` exposes the UID needed to withdraw them. Every
-/// withdrawn asset is returned to the caller so owners, Vault admins and other custody
-/// systems compose the same API. Stores no Party data and defines no plugin or transfer
-/// policy.
 module party_wallet::party_wallet;
 
 // === Imports ===
@@ -31,7 +24,6 @@ public struct ObjectReceivedEvent<phantom Item> has copy, drop {
     object_id: ID,
 }
 
-/// `coins` is the number of coin objects merged into `amount`.
 public struct CoinsReceivedEvent<phantom Currency> has copy, drop {
     party_id: ID,
     amount: u64,
@@ -45,7 +37,6 @@ public struct FundsRedeemedEvent<phantom Currency> has copy, drop {
 
 // === Public Functions ===
 
-/// Aborts if the ticket does not identify an object addressed to this Party.
 public fun receive<Item: key + store>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
@@ -57,7 +48,6 @@ public fun receive<Item: key + store>(
     received
 }
 
-/// Aborts if any ticket is invalid for this Party.
 public fun receive_balance<Currency>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
@@ -71,7 +61,6 @@ public fun receive_balance<Currency>(
     balance
 }
 
-/// Unavailable funds abort in the Sui accumulator implementation.
 public fun redeem_balance<Currency>(
     party: &mut Party,
     admin_cap: &PartyAdminCap,
