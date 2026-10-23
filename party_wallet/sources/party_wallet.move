@@ -35,7 +35,13 @@ public struct FundsRedeemedEvent<phantom Currency> has copy, drop {
     amount: u64,
 }
 
-// === Public Functions ===
+// === View Functions ===
+
+public fun inbox_address(party: &Party): address {
+    object::id(party).to_address()
+}
+
+// === Admin Functions ===
 
 public fun receive<Item: key + store>(
     party: &mut Party,
@@ -72,12 +78,6 @@ public fun redeem_balance<Currency>(
     let balance = hikida::redeem_balance<Currency>(uid, value);
     emit(FundsRedeemedEvent<Currency> { party_id, amount: balance.value() });
     balance
-}
-
-// === View Functions ===
-
-public fun inbox_address(party: &Party): address {
-    object::id(party).to_address()
 }
 
 // === Test Functions ===
