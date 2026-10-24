@@ -27,13 +27,12 @@ public struct StakeLike has key, store {
 
 // === Fixtures ===
 
-fun new_party(group: bool, ctx: &mut TxContext): (Party, PartyAdminCap) {
-    let kind = if (group) party::new_group_kind() else party::new_individual_kind();
-    party::new(kind, "Test Artist", ctx)
+fun new_party(ctx: &mut TxContext): (Party, PartyAdminCap) {
+    party::new("Test Artist", ctx)
 }
 
-fun new_shared_party(scenario: &mut ts::Scenario, group: bool): ID {
-    let (party, admin_cap) = new_party(group, scenario.ctx());
+fun new_shared_party(scenario: &mut ts::Scenario): ID {
+    let (party, admin_cap) = new_party(scenario.ctx());
     let party_id = object::id(&party);
     party.share(&admin_cap);
     transfer::public_transfer(admin_cap, ADMIN);
@@ -51,7 +50,7 @@ fun new_vault<Cap: key + store>(
 }
 
 fun new_vaulted_party(scenario: &mut ts::Scenario): ID {
-    let (party, party_admin_cap) = new_party(false, scenario.ctx());
+    let (party, party_admin_cap) = new_party(scenario.ctx());
     let party_id = object::id(&party);
     party.share(&party_admin_cap);
     let (vault, vault_admin_cap) = new_vault(party_admin_cap, scenario.ctx());
@@ -81,7 +80,7 @@ fun destroy_stake(stake: StakeLike) {
 #[test]
 fun direct_owned_cap_receives_exact_object_and_emits_payload() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     let stake = StakeLike { id: object::new(scenario.ctx()), amount: 5_000 };
@@ -110,9 +109,9 @@ fun direct_owned_cap_receives_exact_object_and_emits_payload() {
 }
 
 #[test]
-fun group_party_receives_an_object() {
+fun receives_a_coin_as_an_object() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, true);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     let coin_id = send_coin<SUI>(&mut scenario, party_id.to_address(), 77);
@@ -140,7 +139,7 @@ fun group_party_receives_an_object() {
 #[test]
 fun receives_and_merges_coins_with_event_payload() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     let first = send_coin<SUI>(&mut scenario, party_id.to_address(), 400);
@@ -174,7 +173,7 @@ fun receives_and_merges_coins_with_event_payload() {
 #[test]
 fun receives_zero_valued_coins_and_emits_count() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     let first = send_coin<SUI>(&mut scenario, party_id.to_address(), 0);
@@ -208,10 +207,10 @@ fun receives_zero_valued_coins_and_emits_count() {
 #[test, expected_failure(abort_code = miso_party::party::EUnauthorized)]
 fun receive_rejects_a_cap_for_another_party() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
-    let (_other_party, other_cap) = new_party(false, scenario.ctx());
+    let (_other_party, other_cap) = new_party(scenario.ctx());
     let coin_id = send_coin<SUI>(&mut scenario, party_id.to_address(), 10);
 
     scenario.next_tx(ADMIN);
@@ -224,7 +223,7 @@ fun receive_rejects_a_cap_for_another_party() {
 #[test, expected_failure]
 fun receive_rejects_a_ticket_for_another_address() {
     let mut scenario = ts::begin(ADMIN);
-    new_shared_party(&mut scenario, false);
+    new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     let coin_id = send_coin<SUI>(&mut scenario, RECIPIENT, 10);
@@ -242,7 +241,7 @@ fun receive_rejects_a_ticket_for_another_address() {
 #[test, expected_failure(abort_code = action::ENothingToReceive)]
 fun receive_balance_rejects_empty_input() {
     let ctx = &mut tx_context::dummy();
-    let (mut party, admin_cap) = new_party(false, ctx);
+    let (mut party, admin_cap) = new_party(ctx);
     let balance = action::receive_balance<SUI>(&mut party, &admin_cap, vector[]);
     balance::destroy_for_testing(balance);
     abort
@@ -253,7 +252,7 @@ fun receive_balance_rejects_empty_input() {
 #[test]
 fun redeems_funds_and_emits_payload() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     balance::create_for_testing<SUI>(750).send_funds(party_id.to_address());
@@ -281,7 +280,7 @@ fun redeems_funds_and_emits_payload() {
 #[test]
 fun partial_redemptions_cover_every_locally_reachable_funded_path() {
     let mut scenario = ts::begin(ADMIN);
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     balance::create_for_testing<SUI>(1_000).send_funds(party_id.to_address());
@@ -311,7 +310,7 @@ fun partial_redemptions_cover_every_locally_reachable_funded_path() {
 #[test, expected_failure(abort_code = action::ENoValueToRedeem)]
 fun zero_redemption_aborts() {
     let ctx = &mut tx_context::dummy();
-    let (mut party, admin_cap) = new_party(false, ctx);
+    let (mut party, admin_cap) = new_party(ctx);
     let redeemed = action::redeem_balance<SUI>(&mut party, &admin_cap, 0);
     balance::destroy_for_testing(redeemed);
     abort
@@ -321,7 +320,7 @@ fun zero_redemption_aborts() {
 fun funded_accumulator_snapshot_documents_zero_vm_result() {
     let mut scenario = ts::begin(SYSTEM);
     accumulator::create_for_testing(scenario.ctx());
-    let party_id = new_shared_party(&mut scenario, false);
+    let party_id = new_shared_party(&mut scenario);
 
     scenario.next_tx(ADMIN);
     balance::create_for_testing<SUI>(123).send_funds(party_id.to_address());
@@ -341,7 +340,7 @@ fun funded_accumulator_snapshot_documents_zero_vm_result() {
 #[test]
 fun inbox_address_is_the_party_id_as_an_address() {
     let ctx = &mut tx_context::dummy();
-    let (party, admin_cap) = new_party(false, ctx);
+    let (party, admin_cap) = new_party(ctx);
     assert_eq!(action::inbox_address(&party), object::id(&party).to_address());
     destroy(admin_cap);
     destroy(party);
@@ -388,8 +387,8 @@ fun vault_admin_borrows_calls_action_puts_back_and_borrows_again() {
 #[test, expected_failure(abort_code = vault::ENotVaultAdmin)]
 fun vault_borrow_rejects_a_foreign_vault_admin_cap() {
     let ctx = &mut tx_context::dummy();
-    let (_party_a, cap_a) = new_party(false, ctx);
-    let (_party_b, cap_b) = new_party(false, ctx);
+    let (_party_a, cap_a) = new_party(ctx);
+    let (_party_b, cap_b) = new_party(ctx);
     let (mut vault_a, _vault_a_admin) = new_vault(cap_a, ctx);
     let (_vault_b, vault_b_admin) = new_vault(cap_b, ctx);
     let (_borrowed, _receipt) = vault_a.borrow_as_admin(&vault_b_admin);
@@ -399,8 +398,8 @@ fun vault_borrow_rejects_a_foreign_vault_admin_cap() {
 #[test, expected_failure(abort_code = miso_party::party::EUnauthorized)]
 fun action_rejects_a_vault_containing_another_partys_cap() {
     let ctx = &mut tx_context::dummy();
-    let (mut target_party, _target_cap) = new_party(false, ctx);
-    let (_other_party, other_cap) = new_party(false, ctx);
+    let (mut target_party, _target_cap) = new_party(ctx);
+    let (_other_party, other_cap) = new_party(ctx);
     let (mut vault, vault_admin_cap) = new_vault(other_cap, ctx);
     let (borrowed_cap, _receipt) = vault.borrow_as_admin(&vault_admin_cap);
     let redeemed = action::redeem_balance<SUI>(&mut target_party, &borrowed_cap, 1);
